@@ -38,7 +38,8 @@ static void bluez_property_value(const gchar* key, GVariant* value)
     const gchar* type = g_variant_get_type_string(value);
 
     g_print("\t%s : ", key);
-    switch (*type) {
+    switch (*type) 
+    {
     case 's':
         g_print("%s\n", g_variant_get_string(value, NULL));
         break;
@@ -94,33 +95,33 @@ static void bluez_list_controllers(GDBusConnection* con,
     GAsyncResult* res,
     gpointer data)
 {
-    (void)data;
-    GVariant* result = NULL;
-    GVariantIter i;
-    const gchar* object_path;
-    GVariant* ifaces_and_properties;
 
-    auto loop = (GMainLoop*)data; 
-    result = g_dbus_connection_call_finish(con, res, NULL);
+    GVariant* result = g_dbus_connection_call_finish(con, res, NULL);
     if (result == NULL)
         g_print("Unable to get result for GetManagedObjects\n");
-
+    else
     /* Parse the result */
-    if (result) {
+    {
         result = g_variant_get_child_value(result, 0);
+        GVariantIter i;
         g_variant_iter_init(&i, result);
-        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
-            const gchar* interface_name;
-            GVariant* properties;
+        const gchar* object_path;
+        GVariant* ifaces_and_properties;
+        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties))
+        {
             GVariantIter ii;
             g_variant_iter_init(&ii, ifaces_and_properties);
-            while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
-                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter")) {
+            const gchar* interface_name;
+            GVariant* properties;
+            while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties))
+            {
+                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter"))
+                {
                     g_print("[ %s ]\n", object_path);
-                    const gchar* property_name;
                     GVariantIter iii;
-                    GVariant* prop_val;
                     g_variant_iter_init(&iii, properties);
+                    const gchar* property_name;
+                    GVariant* prop_val;
                     while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val))
                         bluez_property_value(property_name, prop_val);
                     g_variant_unref(prop_val);
@@ -131,7 +132,7 @@ static void bluez_list_controllers(GDBusConnection* con,
         }
         g_variant_unref(result);
     }
-    g_main_loop_quit(loop);
+    g_main_loop_quit((GMainLoop*)data);
 }
 
 static void bluez_list_devices(GDBusConnection* con,
