@@ -3,6 +3,7 @@
 #include <gio/gio.h> // sudo apt install libglib2.0-dev
 #include <glib.h> // sudo apt install libglib2.0-dev
 #include <iostream>
+#include <vector>
 #include "wimiso8601.h"
 
 // https://stackoverflow.com/questions/50675797/bluez-d-bus-c-application-ble
@@ -27,6 +28,7 @@
  */
 
 GDBusConnection* con(NULL);
+std::vector<gchar> ControllerPaths;
 
 static void bluez_property_value(const gchar* key, GVariant* value)
 {
@@ -85,57 +87,12 @@ static void bluez_list_controllers(GDBusConnection* con,
             {
                 if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter"))
                 {
+                    ControllerPaths.push_back(*object_path);
                     std::cout << "[                   ] [ " << object_path << " ]" << std::endl;
                     GVariantIter iii;
                     g_variant_iter_init(&iii, properties);
                     const gchar* property_name;
                     GVariant* prop_val;
-                    while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val))
-                        bluez_property_value(property_name, prop_val);
-                    g_variant_unref(prop_val);
-                }
-                g_variant_unref(properties);
-            }
-            g_variant_unref(ifaces_and_properties);
-        }
-        g_variant_unref(result);
-    }
-    g_main_loop_quit((GMainLoop*)data);
-}
-
-static void bluez_list_devices(GDBusConnection* con,
-    GAsyncResult* res,
-    gpointer data)
-{
-#ifdef _DEBUG
-    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
-#endif
-    GVariant* result = result = g_dbus_connection_call_finish(con, res, NULL);
-    if (result == NULL)
-        std::cout << "Unable to get result for GetManagedObjects" << std::endl;
-    else
-    /* Parse the result */
-    {
-        result = g_variant_get_child_value(result, 0);
-        GVariantIter i;
-        g_variant_iter_init(&i, result);
-        const gchar* object_path;
-        GVariant* ifaces_and_properties;
-        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties))
-        {
-            const gchar* interface_name;
-            GVariant* properties;
-            GVariantIter ii;
-            g_variant_iter_init(&ii, ifaces_and_properties);
-            while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties))
-            {
-                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device"))
-                {
-                    std::cout << "[                   ] [ " << object_path << " ]" << std::endl;
-                    const gchar* property_name;
-                    GVariantIter iii;
-                    GVariant* prop_val;
-                    g_variant_iter_init(&iii, properties);
                     while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val))
                         bluez_property_value(property_name, prop_val);
                     g_variant_unref(prop_val);
@@ -259,7 +216,6 @@ static void bluez_device_disappeared(GDBusConnection* sig,
                 }
                 address[i] = *tmp;
             }
-            std::cout << std::endl;
             std::cout << "[                   ] Device " << address << " removed" << std::endl;
             g_main_loop_quit((GMainLoop*)user_data);
         }
@@ -341,6 +297,7 @@ static int bluez_adapter_set_property(const char* prop, GVariant* value)
     g_variant_unref(result);
     return 0;
 }
+
 static int bluez_set_discovery_filter_govee(void)
 {
 #ifdef _DEBUG
@@ -448,35 +405,6 @@ int main(int argc, char** argv)
 
     g_main_loop_run(loop);
 
-    //g_dbus_connection_call(con,
-    //    "org.bluez",
-    //    "/org/bluez/hci0",
-    //    "org.freedesktop.DBus.Properties",
-    //    "GetAll",
-    //    g_variant_new("(s)", "org.bluez.Adapter1"),
-    //    G_VARIANT_TYPE("(a{sv})"),
-    //    G_DBUS_CALL_FLAGS_NONE,
-    //    -1,
-    //    NULL,
-    //    (GAsyncReadyCallback)bluez_adapter_getall_property,
-    //    loop);
-
-    //g_main_loop_run(loop);
-
-    //g_dbus_connection_call(con,
-    //    "org.bluez",
-    //    "/",
-    //    "org.freedesktop.DBus.ObjectManager",
-    //    "GetManagedObjects",
-    //    NULL,
-    //    G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
-    //    G_DBUS_CALL_FLAGS_NONE,
-    //    -1,
-    //    NULL,
-    //    (GAsyncReadyCallback)bluez_list_devices,
-    //    loop);
-    //g_main_loop_run(loop);
-
     guint prop_changed = g_dbus_connection_signal_subscribe(con,
         "org.bluez",
         "org.freedesktop.DBus.Properties",
@@ -539,6 +467,7 @@ int main(int argc, char** argv)
     }
 
     g_main_loop_run(loop);
+
     if (argc > 3)
     {
         rc = bluez_adapter_call_method("SetDiscoveryFilter", NULL, NULL);
