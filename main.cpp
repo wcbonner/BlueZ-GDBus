@@ -1,18 +1,14 @@
 #include <cstdio>
-#include <glib.h>   // sudo apt install libglib2.0-dev
-#include <gio/gio.h>    // sudo apt install libglib2.0-dev
+#include <cstring>
+#include <gio/gio.h> // sudo apt install libglib2.0-dev
+#include <glib.h> // sudo apt install libglib2.0-dev
+#include <iostream>
 
 // https://stackoverflow.com/questions/50675797/bluez-d-bus-c-application-ble
 // https://www.linumiz.com/bluetooth-list-devices-using-gdbus/
 // https://stackoverflow.com/questions/70448584/implementing-bluetooth-client-server-architecture-in-c-dbus
 // https://www.mongodb.com/developer/languages/cpp/me-and-the-devil-bluez-1/
 // https://www.mongodb.com/developer/languages/cpp/me-and-the-devil-bluez-2/
-
-//int main()
-//{
-//    printf("hello from %s!\n", "GoveeDBusBTTempLogger");
-//    return 0;
-//}
 
 /*
  * bluez_adapter_filter.c - Set discovery filter, Scan for bluetooth devices
@@ -28,37 +24,34 @@
  *    InterfacesRemoved will be called which quits the main loop
  * gcc `pkg-config --cflags glib-2.0 gio-2.0` -Wall -Wextra -o ./bin/bluez_adapter_filter ./bluez_adapter_filter.c `pkg-config --libs glib-2.0 gio-2.0`
  */
-//#include <glib.h>
-//#include <gio/gio.h>
 
 GDBusConnection* con(NULL);
 
 static void bluez_property_value(const gchar* key, GVariant* value)
 {
     const gchar* type = g_variant_get_type_string(value);
-
-    g_print("\t%s : ", key);
+    std::cout << "\t" << key << " : "; // << std::endl;
     switch (*type) 
     {
     case 's':
-        g_print("%s\n", g_variant_get_string(value, NULL));
+        std::cout << g_variant_get_string(value, NULL) << std::endl;
         break;
     case 'b':
-        g_print("%d\n", g_variant_get_boolean(value));
+        std::cout << g_variant_get_boolean(value) << std::endl;
         break;
     case 'u':
-        g_print("%d\n", g_variant_get_uint32(value));
+        std::cout << g_variant_get_uint32(value) << std::endl;
         break;
     case 'a':
-        g_print("\n");
+        std::cout << std::endl;
         const gchar* uuid;
         GVariantIter i;
         g_variant_iter_init(&i, value);
         while (g_variant_iter_next(&i, "s", &uuid))
-            g_print("\t\t%s\n", uuid);
+            std::cout << "\t\t" << uuid << std::endl;
         break;
     default:
-        g_print("Other\n");
+        std::cout << "Other" << std::endl;
         break;
     }
 }
@@ -117,7 +110,7 @@ static void bluez_list_controllers(GDBusConnection* con,
             {
                 if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter"))
                 {
-                    g_print("[ %s ]\n", object_path);
+                    std::cout << "[ " << object_path << " ]" << std::endl;
                     GVariantIter iii;
                     g_variant_iter_init(&iii, properties);
                     const gchar* property_name;
@@ -294,7 +287,8 @@ static void bluez_device_disappeared(GDBusConnection* sig,
                 }
                 address[i] = *tmp;
             }
-            g_print("\nDevice %s removed\n", address);
+            std::cout << std::endl;
+            std::cout << "Device " << address << " removed" << std::endl;
             g_main_loop_quit((GMainLoop*)user_data);
         }
     }
@@ -322,28 +316,32 @@ static void bluez_signal_adapter_changed(GDBusConnection* conn,
     GVariant* value = NULL;
     const gchar* signature = g_variant_get_type_string(params);
 
-    if (strcmp(signature, "(sa{sv}as)") != 0) {
-        g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
+    if (strcmp(signature, "(sa{sv}as)") != 0)
+    {
+        std::cout << "Invalid signature for " << signal << ": " << signature << " != (sa{sv}as)";
         goto done;
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        if (!g_strcmp0(key, "Powered")) {
-            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-                g_print("Invalid argument type for %s: %s != %s", key,
-                    g_variant_get_type_string(value), "b");
+    while (g_variant_iter_next(properties, "{&sv}", &key, &value))
+    {
+        if (!g_strcmp0(key, "Powered"))
+        {
+            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN))
+            {
+                std::cout << "Invalid argument type for " << key << ": " << g_variant_get_type_string(value) << " != b";
                 goto done;
             }
-            g_print("Adapter is Powered \"%s\"\n", g_variant_get_boolean(value) ? "on" : "off");
+            std::cout << "Adapter is Powered " << (g_variant_get_boolean(value) ? "on" : "off") << std::endl;
         }
-        if (!g_strcmp0(key, "Discovering")) {
-            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-                g_print("Invalid argument type for %s: %s != %s", key,
-                    g_variant_get_type_string(value), "b");
+        if (!g_strcmp0(key, "Discovering"))
+        {
+            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN))
+            {
+                std::cout << "Invalid argument type for " << key << ": " << g_variant_get_type_string(value) << " != b";
                 goto done;
             }
-            g_print("Adapter scan \"%s\"\n", g_variant_get_boolean(value) ? "on" : "off");
+            std::cout << "Adapter scan " << (g_variant_get_boolean(value) ? "on" : "off") << std::endl;
         }
     }
 done:
@@ -410,8 +408,9 @@ static int bluez_set_discovery_filter(char** argv)
 int main(int argc, char** argv)
 {
     con = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    if (con == NULL) {
-        g_print("Not able to get connection to system bus\n");
+    if (con == NULL) 
+    {
+        std::cout << "Not able to get connection to system bus" << std::endl;
         return 1;
     }
 
@@ -432,21 +431,20 @@ int main(int argc, char** argv)
 
     g_main_loop_run(loop);
 
-    g_dbus_connection_call(con,
-        "org.bluez",
-        "/org/bluez/hci0",
-        "org.freedesktop.DBus.Properties",
-        "GetAll",
-        g_variant_new("(s)", "org.bluez.Adapter1"),
-        G_VARIANT_TYPE("(a{sv})"),
-        G_DBUS_CALL_FLAGS_NONE,
-        -1,
-        NULL,
-        (GAsyncReadyCallback)bluez_adapter_getall_property,
-        loop);
+    //g_dbus_connection_call(con,
+    //    "org.bluez",
+    //    "/org/bluez/hci0",
+    //    "org.freedesktop.DBus.Properties",
+    //    "GetAll",
+    //    g_variant_new("(s)", "org.bluez.Adapter1"),
+    //    G_VARIANT_TYPE("(a{sv})"),
+    //    G_DBUS_CALL_FLAGS_NONE,
+    //    -1,
+    //    NULL,
+    //    (GAsyncReadyCallback)bluez_adapter_getall_property,
+    //    loop);
 
-    g_main_loop_run(loop);
-
+    //g_main_loop_run(loop);
 
     //g_dbus_connection_call(con,
     //    "org.bluez",
@@ -496,38 +494,42 @@ int main(int argc, char** argv)
         NULL);
 
     int rc = bluez_adapter_set_property("Powered", g_variant_new("b", TRUE));
-    if (rc) {
-        g_print("Not able to enable the adapter\n");
+    if (rc) 
+    {
+        std::cout << "Not able to enable the adapter" << std::endl;
         goto fail;
     }
 
-    if (argc > 3) {
+    if (argc > 3)
+    {
         rc = bluez_set_discovery_filter(argv);
         if (rc)
             goto fail;
     }
 
     rc = bluez_adapter_call_method("StartDiscovery", NULL, NULL);
-    if (rc) {
-        g_print("Not able to scan for new devices\n");
+    if (rc)
+    {
+        std::cout << "Not able to scan for new devices" << std::endl;
         goto fail;
     }
 
     g_main_loop_run(loop);
-    if (argc > 3) {
+    if (argc > 3)
+    {
         rc = bluez_adapter_call_method("SetDiscoveryFilter", NULL, NULL);
         if (rc)
-            g_print("Not able to remove discovery filter\n");
+            std::cout << "Not able to remove discovery filter" << std::endl;
     }
 
     rc = bluez_adapter_call_method("StopDiscovery", NULL, NULL);
     if (rc)
-        g_print("Not able to stop scanning\n");
+        std::cout << "Not able to stop scanning" << std::endl;
     g_usleep(100);
 
     rc = bluez_adapter_set_property("Powered", g_variant_new("b", FALSE));
     if (rc)
-        g_print("Not able to disable the adapter\n");
+        std::cout << "Not able to disable the adapter" << std::endl;
 fail:
     g_dbus_connection_signal_unsubscribe(con, prop_changed);
     g_dbus_connection_signal_unsubscribe(con, iface_added);
