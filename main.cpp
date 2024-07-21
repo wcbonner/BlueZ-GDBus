@@ -3,6 +3,7 @@
 #include <gio/gio.h> // sudo apt install libglib2.0-dev
 #include <glib.h> // sudo apt install libglib2.0-dev
 #include <iostream>
+#include "wimiso8601.h"
 
 // https://stackoverflow.com/questions/50675797/bluez-d-bus-c-application-ble
 // https://www.linumiz.com/bluetooth-list-devices-using-gdbus/
@@ -30,7 +31,7 @@ GDBusConnection* con(NULL);
 static void bluez_property_value(const gchar* key, GVariant* value)
 {
     const gchar* type = g_variant_get_type_string(value);
-    std::cout << "\t" << key << " : "; // << std::endl;
+    std::cout << "[                   ] \t" << key << " : "; // << std::endl;
     switch (*type) 
     {
     case 's':
@@ -48,7 +49,7 @@ static void bluez_property_value(const gchar* key, GVariant* value)
         GVariantIter i;
         g_variant_iter_init(&i, value);
         while (g_variant_iter_next(&i, "s", &uuid))
-            std::cout << "\t\t" << uuid << std::endl;
+            std::cout << "[                   ] \t\t" << uuid << std::endl;
         break;
     default:
         std::cout << "Other" << std::endl;
@@ -61,7 +62,7 @@ static void bluez_list_controllers(GDBusConnection* con,
     gpointer data)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     GVariant* result = g_dbus_connection_call_finish(con, res, NULL);
     if (result == NULL)
@@ -84,7 +85,7 @@ static void bluez_list_controllers(GDBusConnection* con,
             {
                 if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter"))
                 {
-                    std::cout << "[ " << object_path << " ]" << std::endl;
+                    std::cout << "[                   ] [ " << object_path << " ]" << std::endl;
                     GVariantIter iii;
                     g_variant_iter_init(&iii, properties);
                     const gchar* property_name;
@@ -107,7 +108,7 @@ static void bluez_list_devices(GDBusConnection* con,
     gpointer data)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     GVariant* result = result = g_dbus_connection_call_finish(con, res, NULL);
     if (result == NULL)
@@ -130,7 +131,7 @@ static void bluez_list_devices(GDBusConnection* con,
             {
                 if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device"))
                 {
-                    std::cout << "[ " << object_path << " ]" << std::endl;
+                    std::cout << "[                   ] [ " << object_path << " ]" << std::endl;
                     const gchar* property_name;
                     GVariantIter iii;
                     GVariant* prop_val;
@@ -152,7 +153,7 @@ typedef void (*method_cb_t)(GObject*, GAsyncResult*, gpointer);
 static int bluez_adapter_call_method(const char* method, GVariant* param, method_cb_t method_cb)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     GError* error = NULL;
 
@@ -179,7 +180,7 @@ static void bluez_get_discovery_filter_cb(GObject* con,
     gpointer data)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     GVariant* result = NULL;
     result = g_dbus_connection_call_finish((GDBusConnection*)con, res, NULL);
@@ -202,7 +203,7 @@ static void bluez_device_appeared(GDBusConnection* sig,
     gpointer user_data)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     GVariantIter* interfaces;
     const char* object;
@@ -213,7 +214,7 @@ static void bluez_device_appeared(GDBusConnection* sig,
     {
         if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device"))
         {
-            std::cout << "[ " << object << " ]" << std::endl;
+            std::cout << "[                   ] [ " << object << " ]" << std::endl;
             GVariantIter i;
             g_variant_iter_init(&i, properties);
             const gchar* property_name;
@@ -236,7 +237,7 @@ static void bluez_device_disappeared(GDBusConnection* sig,
     gpointer user_data)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     GVariantIter* interfaces;
     const char* object;
@@ -259,7 +260,7 @@ static void bluez_device_disappeared(GDBusConnection* sig,
                 address[i] = *tmp;
             }
             std::cout << std::endl;
-            std::cout << "Device " << address << " removed" << std::endl;
+            std::cout << "[                   ] Device " << address << " removed" << std::endl;
             g_main_loop_quit((GMainLoop*)user_data);
         }
     }
@@ -275,7 +276,7 @@ static void bluez_signal_adapter_changed(GDBusConnection* conn,
     void* userdata)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     const gchar* signature = g_variant_get_type_string(params);
     GVariantIter* properties = NULL;
@@ -299,7 +300,7 @@ static void bluez_signal_adapter_changed(GDBusConnection* conn,
                 std::cout << "Invalid argument type for " << key << ": " << g_variant_get_type_string(value) << " != b";
                 goto done;
             }
-            std::cout << "Adapter is Powered " << (g_variant_get_boolean(value) ? "on" : "off") << std::endl;
+            std::cout << "[                   ] Adapter is Powered " << (g_variant_get_boolean(value) ? "on" : "off") << std::endl;
         }
         if (!g_strcmp0(key, "Discovering"))
         {
@@ -308,7 +309,7 @@ static void bluez_signal_adapter_changed(GDBusConnection* conn,
                 std::cout << "Invalid argument type for " << key << ": " << g_variant_get_type_string(value) << " != b";
                 goto done;
             }
-            std::cout << "Adapter scan " << (g_variant_get_boolean(value) ? "on" : "off") << std::endl;
+            std::cout << "[                   ] Adapter scan " << (g_variant_get_boolean(value) ? "on" : "off") << std::endl;
         }
     }
 done:
@@ -340,12 +341,10 @@ static int bluez_adapter_set_property(const char* prop, GVariant* value)
     g_variant_unref(result);
     return 0;
 }
-#define FOO
-#ifdef FOO
 static int bluez_set_discovery_filter_govee(void)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     int rc;
     GVariantBuilder* b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
@@ -382,12 +381,11 @@ static int bluez_set_discovery_filter_govee(void)
     return 0;
 
 }
-#endif // FOO
 
 static int bluez_set_discovery_filter(char** argv)
 {
 #ifdef _DEBUG
-    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     int rc;
     GVariantBuilder* b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
