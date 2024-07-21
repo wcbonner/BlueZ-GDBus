@@ -56,39 +56,13 @@ static void bluez_property_value(const gchar* key, GVariant* value)
     }
 }
 
-static void bluez_adapter_getall_property(GDBusConnection* con,
-    GAsyncResult* res,
-    gpointer data)
-{
-    GVariant* result = NULL;
-    GMainLoop* loop = NULL;
-
-    loop = (GMainLoop*)data;
-
-    result = g_dbus_connection_call_finish(con, res, NULL);
-    if (result == NULL)
-        g_print("Unable to get result for GetManagedObjects\n");
-
-    if (result) {
-        g_print("\n\nUsing \"GetAll\":\n");
-        result = g_variant_get_child_value(result, 0);
-        const gchar* property_name;
-        GVariantIter i;
-        GVariant* prop_val;
-        g_variant_iter_init(&i, result);
-        while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val))
-            bluez_property_value(property_name, prop_val);
-        g_variant_unref(prop_val);
-    }
-
-    g_main_loop_quit(loop);
-}
-
 static void bluez_list_controllers(GDBusConnection* con,
     GAsyncResult* res,
     gpointer data)
 {
-
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
     GVariant* result = g_dbus_connection_call_finish(con, res, NULL);
     if (result == NULL)
         g_print("Unable to get result for GetManagedObjects\n");
@@ -132,28 +106,31 @@ static void bluez_list_devices(GDBusConnection* con,
     GAsyncResult* res,
     gpointer data)
 {
-    (void)data;
-    GVariant* result = NULL;
-    GVariantIter i;
-    const gchar* object_path;
-    GVariant* ifaces_and_properties;
-
-    result = g_dbus_connection_call_finish(con, res, NULL);
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
+    GVariant* result = result = g_dbus_connection_call_finish(con, res, NULL);
     if (result == NULL)
-        g_print("Unable to get result for GetManagedObjects\n");
-
+        std::cout << "Unable to get result for GetManagedObjects" << std::endl;
+    else
     /* Parse the result */
-    if (result) {
+    {
         result = g_variant_get_child_value(result, 0);
+        GVariantIter i;
         g_variant_iter_init(&i, result);
-        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
+        const gchar* object_path;
+        GVariant* ifaces_and_properties;
+        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties))
+        {
             const gchar* interface_name;
             GVariant* properties;
             GVariantIter ii;
             g_variant_iter_init(&ii, ifaces_and_properties);
-            while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
-                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-                    g_print("[ %s ]\n", object_path);
+            while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties))
+            {
+                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device"))
+                {
+                    std::cout << "[ " << object_path << " ]" << std::endl;
                     const gchar* property_name;
                     GVariantIter iii;
                     GVariant* prop_val;
@@ -174,6 +151,9 @@ static void bluez_list_devices(GDBusConnection* con,
 typedef void (*method_cb_t)(GObject*, GAsyncResult*, gpointer);
 static int bluez_adapter_call_method(const char* method, GVariant* param, method_cb_t method_cb)
 {
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
     GError* error = NULL;
 
     g_dbus_connection_call(con,
@@ -198,13 +178,15 @@ static void bluez_get_discovery_filter_cb(GObject* con,
     GAsyncResult* res,
     gpointer data)
 {
-    (void)data;
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
     GVariant* result = NULL;
     result = g_dbus_connection_call_finish((GDBusConnection*)con, res, NULL);
     if (result == NULL)
-        g_print("Unable to get result for GetDiscoveryFilter\n");
-
-    if (result) {
+        std::cout << "Unable to get result for GetDiscoveryFilter" << std::endl;
+    else
+    {
         result = g_variant_get_child_value(result, 0);
         bluez_property_value("GetDiscoveryFilter", result);
     }
@@ -219,39 +201,29 @@ static void bluez_device_appeared(GDBusConnection* sig,
     GVariant* parameters,
     gpointer user_data)
 {
-    (void)sig;
-    (void)sender_name;
-    (void)object_path;
-    (void)interface;
-    (void)signal_name;
-    (void)user_data;
-
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
     GVariantIter* interfaces;
     const char* object;
+    g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     const gchar* interface_name;
     GVariant* properties;
-    //int rc;
-
-    g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
-    while (g_variant_iter_next(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
-        if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-            g_print("[ %s ]\n", object);
-            const gchar* property_name;
+    while (g_variant_iter_next(interfaces, "{&s@a{sv}}", &interface_name, &properties))
+    {
+        if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device"))
+        {
+            std::cout << "[ " << object << " ]" << std::endl;
             GVariantIter i;
-            GVariant* prop_val;
             g_variant_iter_init(&i, properties);
+            const gchar* property_name;
+            GVariant* prop_val;
             while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val))
                 bluez_property_value(property_name, prop_val);
             g_variant_unref(prop_val);
         }
         g_variant_unref(properties);
     }
-    /*
-        rc = bluez_adapter_call_method("RemoveDevice", g_variant_new("(o)", object));
-        if(rc)
-            g_print("Not able to remove %s\n", object);
-    */
-    return;
 }
 
 #define BT_ADDRESS_STRING_SIZE 18
@@ -263,25 +235,24 @@ static void bluez_device_disappeared(GDBusConnection* sig,
     GVariant* parameters,
     gpointer user_data)
 {
-    (void)sig;
-    (void)sender_name;
-    (void)object_path;
-    (void)interface;
-    (void)signal_name;
-
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
     GVariantIter* interfaces;
     const char* object;
-    const gchar* interface_name;
-    char address[BT_ADDRESS_STRING_SIZE] = { '\0' };
 
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
-    while (g_variant_iter_next(interfaces, "s", &interface_name)) {
-        if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-            int i;
+    const gchar* interface_name;
+    while (g_variant_iter_next(interfaces, "s", &interface_name))
+    {
+        if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device"))
+        {
             char* tmp = g_strstr_len(object, -1, "dev_") + 4;
-
-            for (i = 0; *tmp != '\0'; i++, tmp++) {
-                if (*tmp == '_') {
+            char address[BT_ADDRESS_STRING_SIZE] = { '\0' };
+            for (int i = 0; *tmp != '\0'; i++, tmp++)
+            {
+                if (*tmp == '_')
+                {
                     address[i] = ':';
                     continue;
                 }
@@ -303,26 +274,22 @@ static void bluez_signal_adapter_changed(GDBusConnection* conn,
     GVariant* params,
     void* userdata)
 {
-    (void)conn;
-    (void)sender;
-    (void)path;
-    (void)interface;
-    (void)userdata;
-
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
+    const gchar* signature = g_variant_get_type_string(params);
     GVariantIter* properties = NULL;
     GVariantIter* unknown = NULL;
-    const char* iface;
-    const char* key;
     GVariant* value = NULL;
-    const gchar* signature = g_variant_get_type_string(params);
-
     if (strcmp(signature, "(sa{sv}as)") != 0)
     {
         std::cout << "Invalid signature for " << signal << ": " << signature << " != (sa{sv}as)";
         goto done;
     }
 
+    const char* iface;
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
+    const char* key;
     while (g_variant_iter_next(properties, "{&sv}", &key, &value))
     {
         if (!g_strcmp0(key, "Powered"))
@@ -373,9 +340,55 @@ static int bluez_adapter_set_property(const char* prop, GVariant* value)
     g_variant_unref(result);
     return 0;
 }
+#define FOO
+#ifdef FOO
+static int bluez_set_discovery_filter_govee(void)
+{
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
+    int rc;
+    GVariantBuilder* b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+    g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string("le"));
+    g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(-100));
+    g_variant_builder_add(b, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
+
+    //GVariantBuilder* u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
+    //g_variant_builder_add(u, "s", argv[3]);
+    //g_variant_builder_add(b, "{sv}", "UUIDs", g_variant_builder_end(u));
+
+    GVariant* device_dict = g_variant_builder_end(b);
+    //g_variant_builder_unref(u);
+    g_variant_builder_unref(b);
+
+    rc = bluez_adapter_call_method("SetDiscoveryFilter",
+        g_variant_new_tuple(&device_dict, 1),
+        NULL);
+    if (rc)
+    {
+        std::cout << "Not able to set discovery filter" << std::endl;
+        return 1;
+    }
+
+    rc = bluez_adapter_call_method("GetDiscoveryFilters",
+        NULL,
+        bluez_get_discovery_filter_cb);
+    if (rc)
+    {
+        std::cout << "Not able to get discovery filter" << std::endl;
+        return 1;
+    }
+
+    return 0;
+
+}
+#endif // FOO
 
 static int bluez_set_discovery_filter(char** argv)
 {
+#ifdef _DEBUG
+    std::cout << "[                   ] " << __FUNCTION__ << std::endl;
+#endif
     int rc;
     GVariantBuilder* b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string(argv[1]));
@@ -389,19 +402,25 @@ static int bluez_set_discovery_filter(char** argv)
     GVariant* device_dict = g_variant_builder_end(b);
     g_variant_builder_unref(u);
     g_variant_builder_unref(b);
-    rc = bluez_adapter_call_method("SetDiscoveryFilter", g_variant_new_tuple(&device_dict, 1), NULL);
-    if (rc) {
-        g_print("Not able to set discovery filter\n");
+
+    rc = bluez_adapter_call_method("SetDiscoveryFilter", 
+        g_variant_new_tuple(&device_dict, 1), 
+        NULL);
+    if (rc)
+    {
+        std::cout << "Not able to set discovery filter" << std::endl;
         return 1;
     }
 
     rc = bluez_adapter_call_method("GetDiscoveryFilters",
         NULL,
         bluez_get_discovery_filter_cb);
-    if (rc) {
-        g_print("Not able to get discovery filter\n");
+    if (rc)
+    {
+        std::cout << "Not able to get discovery filter" << std::endl;
         return 1;
     }
+
     return 0;
 }
 
@@ -505,6 +524,13 @@ int main(int argc, char** argv)
         rc = bluez_set_discovery_filter(argv);
         if (rc)
             goto fail;
+    }
+    else
+    {
+        bluez_set_discovery_filter_govee();
+        bluez_adapter_call_method("GetDiscoveryFilters",
+            NULL,
+            bluez_get_discovery_filter_cb);
     }
 
     rc = bluez_adapter_call_method("StartDiscovery", NULL, NULL);
