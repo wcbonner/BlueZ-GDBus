@@ -87,8 +87,8 @@ static void bluez_list_controllers(GDBusConnection* con,
             {
                 if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter"))
                 {
+                    std::cout << "[                   ] using [ " << interface_name << " ] [ " << object_path << " ]" << std::endl;
                     ControllerPaths->push_back(*object_path);
-                    std::cout << "[                   ] [ " << object_path << " ]" << std::endl;
                     GVariantIter iii;
                     g_variant_iter_init(&iii, properties);
                     const gchar* property_name;
@@ -97,6 +97,8 @@ static void bluez_list_controllers(GDBusConnection* con,
                         bluez_property_value(property_name, prop_val);
                     g_variant_unref(prop_val);
                 }
+                else
+                    std::cout << "[                   ] not using [ " << interface_name << " ] [ " << object_path << " ]" << std::endl;
                 g_variant_unref(properties);
             }
             g_variant_unref(ifaces_and_properties);
