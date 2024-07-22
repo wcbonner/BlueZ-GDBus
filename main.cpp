@@ -28,7 +28,6 @@
  */
 
 GDBusConnection* con(NULL);
-std::vector<gchar> ControllerPaths;
 
 static void bluez_property_value(const gchar* key, GVariant* value)
 {
@@ -72,6 +71,7 @@ static void bluez_list_controllers(GDBusConnection* con,
     else
     /* Parse the result */
     {
+        std::vector<gchar>* ControllerPaths = static_cast<std::vector<gchar> *>(data);
         result = g_variant_get_child_value(result, 0);
         GVariantIter i;
         g_variant_iter_init(&i, result);
@@ -87,7 +87,7 @@ static void bluez_list_controllers(GDBusConnection* con,
             {
                 if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter"))
                 {
-                    ControllerPaths.push_back(*object_path);
+                    ControllerPaths->push_back(*object_path);
                     std::cout << "[                   ] [ " << object_path << " ]" << std::endl;
                     GVariantIter iii;
                     g_variant_iter_init(&iii, properties);
@@ -103,11 +103,10 @@ static void bluez_list_controllers(GDBusConnection* con,
         }
         g_variant_unref(result);
     }
-    g_main_loop_quit((GMainLoop*)data);
 }
 
 typedef void (*method_cb_t)(GObject*, GAsyncResult*, gpointer);
-static int bluez_adapter_call_method(const char* method, GVariant* param, method_cb_t method_cb)
+static int bluez_adapter_call_method(const char* method, GVariant* param, method_cb_t method_cb, const char * adapter_path = "/org/bluez/hci0")
 {
 #ifdef _DEBUG
     std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
@@ -116,8 +115,7 @@ static int bluez_adapter_call_method(const char* method, GVariant* param, method
 
     g_dbus_connection_call(con,
         "org.bluez",
-        /* TODO Find the adapter path runtime */
-        "/org/bluez/hci0",
+        adapter_path,
         "org.bluez.Adapter1",
         method,
         param,
@@ -336,7 +334,6 @@ static int bluez_set_discovery_filter_govee(void)
     }
 
     return 0;
-
 }
 
 static int bluez_set_discovery_filter(char** argv)
@@ -388,8 +385,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // https://docs.gtk.org/glib/ctor.MainLoop.new.html
     GMainLoop* loop = g_main_loop_new(NULL, FALSE);
 
+    std::vector<gchar> ControllerPaths;
+
+    // https://docs.gtk.org/gio/method.DBusConnection.call.html
     g_dbus_connection_call(con,
         "org.bluez",
         "/",
@@ -401,10 +402,9 @@ int main(int argc, char** argv)
         -1,
         NULL,
         (GAsyncReadyCallback)bluez_list_controllers,
-        loop);
+        &ControllerPaths);
 
-    g_main_loop_run(loop);
-
+    // https://docs.gtk.org/gio/method.DBusConnection.signal_subscribe.html
     guint prop_changed = g_dbus_connection_signal_subscribe(con,
         "org.bluez",
         "org.freedesktop.DBus.Properties",
