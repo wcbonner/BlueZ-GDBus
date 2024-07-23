@@ -29,7 +29,7 @@
 
 GDBusConnection* con(NULL);
 
-static void bluez_property_value(const gchar* key, GVariant* value)
+void bluez_property_value(const gchar* key, GVariant* value)
 {
     const gchar* type = g_variant_get_type_string(value);
     std::cout << "[                   ] \t" << key << " : "; // << std::endl;
@@ -58,7 +58,8 @@ static void bluez_property_value(const gchar* key, GVariant* value)
     }
 }
 
-static void bluez_list_controllers(GDBusConnection* con,
+// This is a callback function
+void bluez_list_controllers(GDBusConnection* con,
     GAsyncResult* res,
     gpointer data)
 {
@@ -107,11 +108,12 @@ static void bluez_list_controllers(GDBusConnection* con,
     }
 }
 
+// https://www.mankier.com/5/org.bluez.Adapter
 typedef void (*method_cb_t)(GObject*, GAsyncResult*, gpointer);
 static int bluez_adapter_call_method(const char* method, GVariant* param, method_cb_t method_cb, const char * adapter_path = "/org/bluez/hci0")
 {
 #ifdef _DEBUG
-    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
+    std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << " (" << method << ")" << std::endl;
 #endif
     GError* error = NULL;
 
@@ -179,6 +181,7 @@ static void bluez_device_appeared(GDBusConnection* sig,
             while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val))
                 bluez_property_value(property_name, prop_val);
             g_variant_unref(prop_val);
+            g_main_loop_quit((GMainLoop*)user_data);
         }
         g_variant_unref(properties);
     }
@@ -306,7 +309,7 @@ static int bluez_set_discovery_filter_govee(void)
     int rc;
     GVariantBuilder* b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string("le"));
-    g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(-100));
+    //g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(-100));
     g_variant_builder_add(b, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
 
     //GVariantBuilder* u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
