@@ -85,6 +85,9 @@
   <ItemGroup>
     <ClInclude Include="wimiso8601.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="LICENSE.txt" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <CppLanguageStandard>c++17</CppLanguageStandard>
