@@ -8,6 +8,9 @@
 
 // https://stackoverflow.com/questions/50675797/bluez-d-bus-c-application-ble
 // https://www.linumiz.com/bluetooth-list-devices-using-gdbus/
+// https://www.linumiz.com/bluetooth-list-available-controllers-using-dbus/
+// https://www.linumiz.com/bluetooth-get-adapter-controller-properties-using-gdbus/
+// https://stackoverflow.com/questions/50675797/bluez-d-bus-c-application-ble
 // https://stackoverflow.com/questions/70448584/implementing-bluetooth-client-server-architecture-in-c-dbus
 // https://www.mongodb.com/developer/languages/cpp/me-and-the-devil-bluez-1/
 // https://www.mongodb.com/developer/languages/cpp/me-and-the-devil-bluez-2/
@@ -278,14 +281,14 @@ done:
         g_variant_unref(value);
 }
 
-static int bluez_adapter_set_property(const char* prop, GVariant* value)
+static int bluez_adapter_set_property(const char* prop, GVariant* value, const char* adapter_path = "/org/bluez/hci0")
 {
     GVariant* result;
     GError* error = NULL;
 
     result = g_dbus_connection_call_sync(con,
         "org.bluez",
-        "/org/bluez/hci0",
+        adapter_path,
         "org.freedesktop.DBus.Properties",
         "Set",
         g_variant_new("(ssv)", "org.bluez.Adapter1", prop, value),
@@ -307,6 +310,7 @@ static int bluez_set_discovery_filter_govee(void)
     std::cout << "[" << getTimeISO8601(true) << "] " << __FUNCTION__ << std::endl;
 #endif
     int rc;
+    // https://docs.gtk.org/glib/gvariant-format-strings.html
     GVariantBuilder* b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string("le"));
     //g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(-100));
@@ -396,6 +400,7 @@ int main(int argc, char** argv)
     std::vector<gchar> ControllerPaths;
 
     // https://docs.gtk.org/gio/method.DBusConnection.call.html
+    // dbus-send --system --dest=org.bluez --print-reply / org.freedesktop.DBus.ObjectManager.GetManagedObjects
     g_dbus_connection_call(con,
         "org.bluez",
         "/",
@@ -443,7 +448,7 @@ int main(int argc, char** argv)
         loop,
         NULL);
 
-    int rc = bluez_adapter_set_property("Powered", g_variant_new("b", TRUE));
+    int rc = bluez_adapter_set_property("Powered", g_variant_new("b", TRUE), "/org/bluez/hci0");
     if (rc) 
     {
         std::cout << "Not able to enable the adapter" << std::endl;
@@ -473,21 +478,22 @@ int main(int argc, char** argv)
 
     g_main_loop_run(loop);
 
-    if (argc > 3)
-    {
-        rc = bluez_adapter_call_method("SetDiscoveryFilter", NULL, NULL);
-        if (rc)
-            std::cout << "Not able to remove discovery filter" << std::endl;
-    }
+    rc = bluez_adapter_call_method("SetDiscoveryFilter", NULL, NULL);
+    if (rc)
+        std::cout << "Not able to remove discovery filter" << std::endl;
 
     rc = bluez_adapter_call_method("StopDiscovery", NULL, NULL);
     if (rc)
         std::cout << "Not able to stop scanning" << std::endl;
     g_usleep(100);
 
+#define POWEROFFONDONE
+#ifdef POWEROFFONDONE
     rc = bluez_adapter_set_property("Powered", g_variant_new("b", FALSE));
     if (rc)
         std::cout << "Not able to disable the adapter" << std::endl;
+#endif // POWEROFFONDONE
+
 fail:
     g_dbus_connection_signal_unsubscribe(con, prop_changed);
     g_dbus_connection_signal_unsubscribe(con, iface_added);

@@ -37,7 +37,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{b8ddebe7-797d-47fd-8fb2-f912b6e69cf8}</ProjectGuid>
     <Keyword>Linux</Keyword>
-    <RootNamespace>GoveeDBusBTTempLogger</RootNamespace>
+    <RootNamespace>BlueZ-GDBus</RootNamespace>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
     <ApplicationType>Linux</ApplicationType>
     <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
