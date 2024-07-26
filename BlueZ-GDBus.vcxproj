@@ -79,7 +79,7 @@
     <WSLPath>Debian</WSLPath>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="bluez-gdbus.cpp" />
     <ClCompile Include="wimiso8601.cpp" />
   </ItemGroup>
   <ItemGroup>
